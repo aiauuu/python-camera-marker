@@ -24,13 +24,14 @@ def duplicate_rename(file_path):
 class CameraCaptureControl(ft.UserControl):
     def __init__(self):
         super().__init__()
-        self.capture = cv2.VideoCapture(0)
+        self.capture = cv2.VideoCapture(1)
         self.width = int(self.capture.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self.capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         self.fps = 29.97
         self.record = None
         self.writer = None
         self.frame_num = 0
+        self.latency = 1 / self.fps
 
     def generate_writer(self):
 
@@ -77,7 +78,7 @@ class CameraCaptureControl(ft.UserControl):
                     self.record = None
                     self.writer = None
 
-            # sleep(self.latency)
+            # time.sleep(self.latency)
 
     def build(self):
         self.image_control = ft.Image(
