@@ -4,7 +4,6 @@ import os
 import time
 import csv
 import datetime
-
 import cv2
 import flet as ft
 
