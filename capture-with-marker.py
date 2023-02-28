@@ -1,6 +1,7 @@
 import base64
 import threading
 import os
+import sys
 import time
 import csv
 import datetime
@@ -52,7 +53,7 @@ class CameraCaptureControl(ft.UserControl):
         VIDEO_EXT = "mp4"
 
         now = datetime.datetime.now()
-        self.now_str = now.strftime('%Y-%m-%d_%H.%M.%S')
+        self.now_str = now.strftime("%Y-%m-%d_%H.%M.%S")
         save_filename = f"{self.now_str}_video.{VIDEO_EXT}"
         save_path = os.path.join(SAVE_FOLDER_PATH, save_filename)
 
@@ -102,7 +103,7 @@ class CameraCaptureControl(ft.UserControl):
                     if self.recording:
                         start_time = time.time()
                         self.video_writer.write(self.raw_frame)  # フレームを書き込む。
-                        print(f"write time: {time.time() - start_time}")
+                        # print(f"write time: {time.time() - start_time}")
                         self.frame_num += 1
                         self.record_time.append(time.time())
 
@@ -141,7 +142,6 @@ class Marker:
         self.dlg_count = 0
         self.marked_frame_num = None
 
-
     def generate_dlg_modal(self):
         self.dlg_count += 1
         self.dlg_modal = ft.AlertDialog(
@@ -179,13 +179,19 @@ def main(page: ft.Page):
     marker = Marker(page)
 
     def record_button_clicked(e):
-        recording_style=ft.ButtonStyle(color={
-                    ft.MaterialState.DEFAULT: ft.colors.WHITE,
-                },bgcolor={"": ft.colors.RED},)
+        recording_style = ft.ButtonStyle(
+            color={
+                ft.MaterialState.DEFAULT: ft.colors.WHITE,
+            },
+            bgcolor={"": ft.colors.RED},
+        )
 
-        style=ft.ButtonStyle(color={
-                            ft.MaterialState.DEFAULT: ft.colors.WHITE,
-                        },bgcolor={"": ft.colors.BLUE},)
+        style = ft.ButtonStyle(
+            color={
+                ft.MaterialState.DEFAULT: ft.colors.WHITE,
+            },
+            bgcolor={"": ft.colors.BLUE},
+        )
 
         if b1.text == "Record":
             cap_ctr.start_record()
@@ -196,7 +202,7 @@ def main(page: ft.Page):
             b1.icon_color = ft.colors.BLACK
 
             b3.disabled = False
-        
+
         else:
             cap_ctr.end_record()
             marker_save_path = os.path.join(SAVE_FOLDER_PATH, f"{cap_ctr.now_str}_marker.csv")
@@ -217,9 +223,19 @@ def main(page: ft.Page):
     def button3_clicked(e):
         marker.open_dlg_modal(e, cap_ctr.frame_num)
 
-    b1 = ft.ElevatedButton("Record", on_click=record_button_clicked, data=0, style=ft.ButtonStyle(color={
-                    ft.MaterialState.DEFAULT: ft.colors.WHITE,
-                },bgcolor={"": ft.colors.BLUE},), icon="FIBER_MANUAL_RECORD", icon_color=ft.colors.RED)
+    b1 = ft.ElevatedButton(
+        "Record",
+        on_click=record_button_clicked,
+        data=0,
+        style=ft.ButtonStyle(
+            color={
+                ft.MaterialState.DEFAULT: ft.colors.WHITE,
+            },
+            bgcolor={"": ft.colors.BLUE},
+        ),
+        icon="FIBER_MANUAL_RECORD",
+        icon_color=ft.colors.RED,
+    )
     b3 = ft.ElevatedButton("Marker", on_click=button3_clicked, data=0, disabled=True, icon="CHECK_CIRCLE")
 
     row1 = ft.ResponsiveRow(
@@ -240,8 +256,12 @@ def main(page: ft.Page):
 
     page.add(row1, cap_ctr)
 
-SAVE_FOLDER_PATH = "./record_data"
-os.makedirs(SAVE_FOLDER_PATH, exist_ok=True)
 
+# SAVE_FOLDER_PATH = "./record_data"
+# os.makedirs(SAVE_FOLDER_PATH, exist_ok=True)
+
+SAVE_FOLDER_PATH = "./record_data"
+SAVE_FOLDER_PATH = os.path.join(os.path.dirname(sys.argv[0]), SAVE_FOLDER_PATH)
+os.makedirs(SAVE_FOLDER_PATH, exist_ok=True)
 
 ft.app(target=main)
