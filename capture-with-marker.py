@@ -24,13 +24,15 @@ def duplicate_rename(file_path):
 
 
 class CameraCaptureControl(ft.UserControl):
-    def __init__(self):
+    def __init__(self, page:ft.Page):
         super().__init__()
+        self.page = page
+        self.new_filename = None
 
         FPS = 30
-        FOURCC = "MJPG"
-        WIDTH = 1280
-        HEIGHT = 720
+        FOURCC = "H264"
+        WIDTH = 1920
+        HEIGHT = 1080
 
         self.capture = cv2.VideoCapture(0)
         self.capture.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*FOURCC))
@@ -49,17 +51,20 @@ class CameraCaptureControl(ft.UserControl):
         print(f"fps: {self.capture.get(cv2.CAP_PROP_FPS)}")
 
     def generate_writer(self):
-        FOURCC = "avc1"
-        VIDEO_EXT = "mp4"
+        self.SAVE_FOURCC = "avc1"
+        self.VIDEO_EXT = "mp4"
+
+        self.video_dir_path = os.path.join(SAVE_DIR_PATH, "video")
+        os.makedirs(self.video_dir_path, exist_ok=True)
 
         now = datetime.datetime.now()
         self.now_str = now.strftime("%Y-%m-%d_%H.%M.%S")
-        save_filename = f"{self.now_str}_video.{VIDEO_EXT}"
-        save_path = os.path.join(SAVE_FOLDER_PATH, save_filename)
+        self.video_filename = f"{self.now_str}.{self.VIDEO_EXT}"
+        self.save_path = os.path.join(self.video_dir_path, self.video_filename)
 
         # VideoWriter作成
-        fourcc = cv2.VideoWriter_fourcc(*FOURCC)
-        return cv2.VideoWriter(save_path, fourcc, self.fps, (self.width, self.height))
+        fourcc = cv2.VideoWriter_fourcc(*self.SAVE_FOURCC)
+        return cv2.VideoWriter(self.save_path, fourcc, self.fps, (self.width, self.height))
 
     def did_mount(self):
         self.running = True
@@ -113,6 +118,39 @@ class CameraCaptureControl(ft.UserControl):
                         during_time = self.record_time[-1] - self.record_time[0]
                         print(f"record_time: {during_time} frame_num:{self.frame_num} fps: {self.frame_num / during_time}")
 
+    def generate_dlg_modal(self):
+        self.dlg_modal = ft.AlertDialog(
+            modal=True,
+            title=ft.Text("保存ファイル名"),
+            content=ft.Text("保存ファイル名を入力してください"),
+            actions=[
+                ft.TextField(label="ファイル名", value=self.now_str, autofocus=True,suffix_text=".mp4", text_size=12),
+                ft.TextButton("OK", on_click=self.close_dlg),
+            ],
+            actions_alignment=ft.MainAxisAlignment.END,
+
+            on_dismiss=lambda e: print("Modal dialog dismissed!"),
+        )
+
+    def close_dlg(self, e):
+        self.new_filename = self.dlg_modal.actions[0].value
+
+        if self.new_filename == "":
+            self.new_filename = self.now_str
+
+        os.rename(self.save_path, os.path.join(self.video_dir_path, f"{self.new_filename}.mp4"))
+
+        self.dlg_modal.open = False
+        self.page.update()
+
+
+    def open_dlg_modal(self, e):
+        self.generate_dlg_modal()
+        self.page.dialog = self.dlg_modal
+        self.dlg_modal.open = True
+        self.page.update()
+
+
     def build(self):
         self.image_control = ft.Image(width=640, height=360, fit=ft.ImageFit.FIT_WIDTH)
         return self.image_control
@@ -149,7 +187,7 @@ class Marker:
             title=ft.Text("マーカー"),
             content=ft.Text("マーカーをセットしました．マーカー名を入力してください．"),
             actions=[
-                ft.TextField(label="マーカー名", value=f"marker{self.dlg_count}"),
+                ft.TextField(label="マーカー名", value=f"marker{self.dlg_count}", autofocus=True),
                 ft.TextButton("OK", on_click=self.close_dlg),
             ],
             actions_alignment=ft.MainAxisAlignment.END,
@@ -175,7 +213,7 @@ def main(page: ft.Page):
     page.update()
 
     page.title = "Video Capture With Marker"
-    cap_ctr = CameraCaptureControl()
+    cap_ctr = CameraCaptureControl(page)
     marker = Marker(page)
 
     def record_button_clicked(e):
@@ -205,7 +243,16 @@ def main(page: ft.Page):
 
         else:
             cap_ctr.end_record()
-            marker_save_path = os.path.join(SAVE_FOLDER_PATH, f"{cap_ctr.now_str}_marker.csv")
+            cap_ctr.open_dlg_modal(e)
+            
+            # 閉じられるまで待つ
+            while cap_ctr.dlg_modal.open:
+                pass
+
+            marker_save_dir = os.path.join(SAVE_DIR_PATH, "marker")
+            os.makedirs(marker_save_dir, exist_ok=True)
+            print(cap_ctr.new_filename)
+            marker_save_path = os.path.join(marker_save_dir, f"{cap_ctr.new_filename}.csv")
             marker.save(path=marker_save_path)
 
             b1.style = style
@@ -257,11 +304,11 @@ def main(page: ft.Page):
     page.add(row1, cap_ctr)
 
 
-# SAVE_FOLDER_PATH = "./record_data"
-# os.makedirs(SAVE_FOLDER_PATH, exist_ok=True)
+# SAVE_DIR_PATH = "./record_data"
+# os.makedirs(SAVE_DIR_PATH, exist_ok=True)
 
-SAVE_FOLDER_PATH = "./record_data"
-SAVE_FOLDER_PATH = os.path.join(os.path.dirname(sys.argv[0]), SAVE_FOLDER_PATH)
-os.makedirs(SAVE_FOLDER_PATH, exist_ok=True)
+SAVE_DIR_PATH = "./record_data"
+SAVE_DIR_PATH = os.path.join(os.path.dirname(sys.argv[0]), SAVE_DIR_PATH)
+os.makedirs(SAVE_DIR_PATH, exist_ok=True)
 
 ft.app(target=main)
